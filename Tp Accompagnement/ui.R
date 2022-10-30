@@ -309,19 +309,24 @@ ui <- dashboardPage(skin="green",
                                  wellPanel(
                                    fluidRow(width=12,
                                     box(width = 6,
-                                        column(8),
+                                        column(12, title="Caractéristiques du modèle",
+                                               verbatimTextOutput("AD"),),
                                         column(4)
                                     ),
                                     box(width = 6,
-                                        column(8),
+                                        column(12, title="Matrice de Confusion",
+                                               verbatimTextOutput("tablead"),),
                                         column(4)
                                     ),
                                     box(width = 6,
-                                        column(8),
+                                        column(12, title="Arbre de décision",
+                                               plotOutput("ad",width = "100%", height = "500px"),),
                                         column(4)
                                     ),
+                                   
                                     box(width = 6,
-                                        column(8),
+                                        column(12, title ="Score",
+                                               verbatimTextOutput("scoread")),
                                         column(4)
                                     )
                                    )
@@ -341,16 +346,24 @@ ui <- dashboardPage(skin="green",
                                             verbatimTextOutput("logistic_regression"),
                                           )
                                       ),
-                                      box(width = 6,
-                                          column(8),
+                                      box(width = 6, 
+                                          column(12,title="Matrice de Confusion",
+                                                 verbatimTextOutput("tablelg"),),
                                           column(4)
                                       ),
                                       box(width = 6,
-                                          column(8),
+                                          column(12, title ="Scores de la Prédiction",
+                                                 verbatimTextOutput("scorelg"),),
                                           column(4)
                                       ),
                                       box(width = 6,
-                                          column(8),
+                                          column(12, title ="Courbe ROC",
+                                                 plotOutput("lgRoc",width = "100%", height = "500px"),),
+                                          column(4)
+                                      ),
+                                      box(width = 6,
+                                          column(12, title ="AUC",
+                                                 verbatimTextOutput("auclg"),),
                                           column(4)
                                       )
                                      )
@@ -372,7 +385,37 @@ ui <- dashboardPage(skin="green",
                              "Support Vector Machine (avec kernel)",
                              fluidRow(
                                box(width = 12,dataTableOutput("table_svm_avec"), title="Modèle Support Vector Machine (avec kernel)",
-                                   wellPanel(),
+                                   wellPanel(
+                                     
+                                     fluidRow(width=12,
+                                              box(width = 6,
+                                                  column(12, title="Caractéristiques du modèle",
+                                                         verbatimTextOutput("SVM"),),
+                                                  column(4)
+                                              ),
+                                              box(width = 6,
+                                                  column(12,title="Matrice de Confusion",
+                                                         verbatimTextOutput("tablesvm"),),
+                                                  column(4)
+                                              ),
+                                              box(width = 6,
+                                                  column(12,title="Score de prédiction",
+                                                         verbatimTextOutput("scoresvm"),),
+                                                  column(4)
+                                              ),
+                                              box(width = 6,
+                                                  column(12, title ="Courbe ROC",
+                                                         plotOutput("svmRoc",width = "100%", height = "500px"),),
+                                                  column(4)
+                                              ),
+                                              box(width = 6,
+                                                  column(12, title ="AUC",
+                                                         verbatimTextOutput("aucsvm")),
+                                                  column(4)
+                                              )
+                                     )
+                                     
+                                   ),
                                    collapsible = T
                                )
                              )
