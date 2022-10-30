@@ -28,6 +28,9 @@ library(shinyscreenshot)
 library(ggcorrplot)
 library("caTools")
 library(Gmisc)
+library(funModeling) 
+library(tidyverse) 
+#library(Hmisc)
 
 options(shiny.maxRequestSize=300*1024^2)
 server<-function(input,output,session){
@@ -51,7 +54,7 @@ server<-function(input,output,session){
   occ1 = 0
   difference = 0
   balance_value = 0
-  sliderVale = 0
+  sliderValue = 0
   train_set <- NULL
   test_set <- NULL
   
@@ -79,6 +82,9 @@ server<-function(input,output,session){
     
     if(stringr::str_ends(input$input_credit_fraud$datapath, "csv")) {
       credit_fraud_data <<- read.csv(input$input_credit_fraud$datapath,header = TRUE, sep=",", stringsAsFactors = FALSE, na.strings = c("","NA"))
+      if (is.null(credit_fraud_data)) {
+        credit_fraud_data <<- read.csv(input$input_credit_fraud$datapath,header = TRUE, sep=";", stringsAsFactors = FALSE, na.strings = c("","NA"))
+      }
     } else if (stringr::str_ends(input$input_credit_fraud$datapath, "(xlsx|xls)")) {
       sheet1 <- readxl::read_excel(input$input_credit_fraud$datapath, 1 , na = c("N/A", "n/a"))
       #sheet2 <- readxl::read_excel(input$input_credit_fraud$datapath, 2, na = c("N/A", "n/a"))
@@ -87,8 +93,37 @@ server<-function(input,output,session){
     }
     
     if (!is.null(credit_fraud_data)) {
-      fillSelect("outcome", colnames(credit_fraud_data), "Choisir")
-      fillSelect("variables", colnames(credit_fraud_data), "Choisir")
+      #fillSelect("outcome", colnames(credit_fraud_data), "Choisir")
+      #fillSelect("variables", colnames(credit_fraud_data), "Choisir")
+      #Générer une liste afin que l'utilisateur puisse choisir les variables 
+      observe({
+        v<-array(names(credit_fraud_data))
+        updateSelectInput(
+          session, 
+          "variables", 
+          choices = v ,
+          selected = v[[1]]
+        )
+      })
+      
+      #Générer une liste afin que l'utilisateur puisse choisir les predicteurs 
+      observe({
+        data = credit_fraud_data
+        n = c()
+        for ( i in 1:ncol(credit_fraud_data)){
+          if(is.integer(data[,i]) || is.numeric(data[,i])){
+            n = c(n,i)
+          }
+        }
+        data = data[,n]
+        v<-array(names(data))
+        updateSelectInput(
+          session, 
+          "outcome", 
+          choices = v ,
+          selected = v[1]
+        )
+      })
     }
     credit_fraud_data 
   })
@@ -136,139 +171,133 @@ server<-function(input,output,session){
   }
   
   
-  
-  #Générer une liste afin que l'utilisateur puisse choisir les variables 
-  # observe({
-  #   v<-array(names(data_credit_fraud()))
-  #   updateSelectInput(
-  #     session, 
-  #     "variables", 
-  #     choices = v ,
-  #     selected = v[[1]]
-  #     
-  #   )
-  # })
-  # #Générer une liste afin que l'utilisateur puisse choisir les predicteurs 
-  # observe({
-  #   data = data_credit_fraud()
-  #   n = c()
-  #   for ( i in 1:ncol(data_credit_fraud())){
-  #     if(is.integer(data[,i])){
-  #       n = c(n,i)
-  #     }
-  #   }
-  #   data = data[,n]
-  #   v<-array(names(data))
-  #   updateSelectInput(
-  #     session, 
-  #     "outcome", 
-  #     choices = v ,
-  #     selected = v[1],
-  #     
-  #     
-  #   )
-  # })
+  if(!is.null(credit_fraud_data)){
+    
+    #Générer une liste afin que l'utilisateur puisse choisir les variables 
+     observe({
+       v<-array(names(credit_fraud_data))
+       updateSelectInput(
+         session, 
+         "variables", 
+         choices = v ,
+         selected = v[[1]]
+       )
+     })
+       
+     #Générer une liste afin que l'utilisateur puisse choisir les predicteurs 
+     observe({
+       data = credit_fraud_data
+       n = c()
+       for ( i in 1:ncol(credit_fraud_data)){
+         if(is.integer(data[,i]) || is.numeric(data[,i])){
+           n = c(n,i)
+         }
+       }
+       data = data[,n]
+       v<-array(names(data))
+       updateSelectInput(
+         session, 
+         "outcome", 
+         choices = v ,
+         selected = v[[1]]
+       )
+     })
+  }
   
   
   makeReactiveBinding("Slider1")
   
   observeEvent(input$Slider1, {
-    print("slider touché")
-    
-    sliderVale <- input$Slider1
-    
-    output$cntTest <- renderText({
-      paste("% Train :", sliderVale)
-    })
-    
-    output$cntTrain <- renderText({
-      paste("% Test :", 100 - sliderVale)
-    })
-    
-    ok= checkParams()
-    if(!is.null(credit_fraud_data)){
-      print("tout okay")
-      set.seed(123)
-      splitSlider = sliderVale / 100
-      split = sample.split(credit_fraud_data, SplitRatio = splitSlider)
-      train_set <<- subset(credit_fraud_data, split == TRUE)
-      print(nrow(train_set))
+    sliderValue <- input$Slider1
+    if (sliderValue != 0 && !is.null(credit_fraud_data)) {
+      output$cntTest <- renderText({
+        paste("% Train :", sliderValue)
+      })
       
-      test_set <<- subset(credit_fraud_data, split == FALSE)
-      print(nrow(test_set))
+      output$cntTrain <- renderText({
+        paste("% Test :", 100 - sliderValue)
+      })
+      # if(!is.null(credit_fraud_data)){
+      #   set.seed(123)
+      #   splitSlider = sliderValue / 100
+      #   split = sample.split(credit_fraud_data, SplitRatio = splitSlider)
+      #   train_set <<- subset(credit_fraud_data, split == TRUE)
+      #   print(nrow(train_set))
+      #   
+      #   test_set <<- subset(credit_fraud_data, split == FALSE)
+      #   print(nrow(test_set))
+      # }
     }
     
   })
   
   observeEvent(input$demarrage, {
-    #print("boutton cliqué")
-    #print(train_set)
-    data <- NULL
-    lg <- eventReactive(input$demarrage,{
-      ok = checkParams()
-      if(ok==TRUE){
-        parameter1 = paste(input$outcome ,"~")
-        parameter1 = paste(parameter1 , input$variables[1])
-        
-        # for (i in 2:length(input$variables)){
-        #   parameter1 = paste(parameter1,"+" , input$variables[i])
-        # }
-        
-        for (i in 2:length(input$variables)){
-          data <- train_set[, c(input$outcome, input$variables[i])]
-        }
-        
-        print(data)
-        
-        parameter3 = "binomial"
-        parameter <- list(formula= parameter1, data= train_set,family=parameter3, na.action=na.omit)
-        
-        fastDoCall(glm, parameter,quote = FALSE)
-        
-        
-      }else {
-        return(NULL)
+    if (!is.null(credit_fraud_data)) {
+      if(input$Slider1 != 0){
+        set.seed(123)
+        splitSlider = sliderValue / 100
+        split = sample.split(credit_fraud_data, SplitRatio = splitSlider)
+        train_set <<- subset(credit_fraud_data, split == TRUE)
+        test_set <<- subset(credit_fraud_data, split == FALSE)
+      }else{
+        shinyalert("Veuillez régler la taille du train et du test set", "Attention veuillez configurer les paramètres de train et de test !", "warning")
       }
-    
-    })
-    
-    summary(lg())
+    }else{
+      shinyalert("Veuillez charger un jeu de données", "Attention veuillez charger votre jeu données !", "error")
+    }
   })
   
   #####################Logistic regression###################
   
+  # lg <- eventReactive(input$demarrage,{
+  #   print("call lg")
+  #   print(train_set)
+  #   ok = Ok()
+  #   if(ok==TRUE){
+  #     parameter1 = paste(input$outcome ,"~")
+  #     parameter1 = paste(parameter1 , input$variables[1])
+  #     
+  #     for (i in 2:length(input$variables)){
+  #       parameter1 = paste(parameter1,"+" , input$variables[i])
+  #     }
+  #     
+  #     parameter3 = "binomial"
+  #     parameter <- list(formula= parameter1, data= train_set,family=parameter3, na.action=na.omit)
+  #     
+  #     fastDoCall(glm, parameter,quote = FALSE)
+  #     
+  #     
+  #   }else {
+  #     
+  #     return(NULL)
+  #     
+  #   }
+  # })
+  
   lg <- eventReactive(input$demarrage,{
-    print("call lg")
-    print(train_set)
-    ok = Ok()
+    ok = checkParams()
     if(ok==TRUE){
       parameter1 = paste(input$outcome ,"~")
+      
       parameter1 = paste(parameter1 , input$variables[1])
       
       for (i in 2:length(input$variables)){
         parameter1 = paste(parameter1,"+" , input$variables[i])
       }
-      
       parameter3 = "binomial"
-      parameter <- list(formula= parameter1, data= train_set,family=parameter3, na.action=na.omit)
-      
-      fastDoCall(glm, parameter,quote = FALSE)
-      
-      
+      parameter <- list(formula= parameter1, data= train_set, family = parameter3, na.action=na.omit)
+      shinyalert("Modèle réussi", "Entrainement et test réussis !", "success")
+      fastDoCall(glm, parameter, quote = FALSE)
     }else {
-      
       return(NULL)
-      
     }
   })
   
   output$logistic_regression <- renderPrint({
-    
-    print(summary(y))
     ok = Ok()
     if(ok==TRUE){
-      y = lg
-      summary(y)
-    } })
+      summary(lg())
+    } 
+  })
   
 }

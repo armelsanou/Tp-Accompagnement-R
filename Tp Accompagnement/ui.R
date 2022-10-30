@@ -1,3 +1,4 @@
+library(shinydashboard)
 ui <- dashboardPage(skin="green",
   dashboardHeader(title="TP Accompagnement R"),
   dashboardSidebar
@@ -40,7 +41,7 @@ ui <- dashboardPage(skin="green",
             label = h4("% Du Train Set"),
             min = 0,
             max = 100,
-            value = 80
+            value = 0
           ),
           textOutput("cntTrain"),
           textOutput("cntTest"),
@@ -336,10 +337,9 @@ ui <- dashboardPage(skin="green",
                                    wellPanel(
                                      fluidRow(width=12,
                                       box(width = 6,
-                                          column(8, title="Caractéristiques du modèle",
-                                            #verbatimTextOutput("logistic_regression"),
-                                          ),
-                                          column(4)
+                                          column(12, title="Caractéristiques du modèle",
+                                            verbatimTextOutput("logistic_regression"),
+                                          )
                                       ),
                                       box(width = 6,
                                           column(8),
