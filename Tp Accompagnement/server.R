@@ -154,7 +154,7 @@ server<-function(input,output,session){
   #permet de vérifier si on a choisi au moins deux prédicteurs
   Ok <-  eventReactive(input$demarrage,{
     if(length(input$variables)<2){
-      shinyalert("Oops!", "On a besoin de plus deux predicteur pour que tout fonctionne.", type = "error")
+      shinyalert("Oops!", "On a besoin de plus deux predicteurs pour que tout fonctionne.", type = "error")
       return (FALSE)
     }else{
       return(TRUE)
