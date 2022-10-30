@@ -281,7 +281,7 @@ server<-function(input,output,session){
       
       parameter1 = paste(parameter1 , input$variables[1])
       
-      for (i in 2:length(input$variables)){
+      for (i in 1:length(input$variables)){
         parameter1 = paste(parameter1,"+" , input$variables[i])
       }
       parameter3 = "binomial"
