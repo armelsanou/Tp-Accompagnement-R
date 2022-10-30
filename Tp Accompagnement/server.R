@@ -171,40 +171,6 @@ server<-function(input,output,session){
   }
   
   
-  if(!is.null(credit_fraud_data)){
-    
-    #Générer une liste afin que l'utilisateur puisse choisir les variables 
-     observe({
-       v<-array(names(credit_fraud_data))
-       updateSelectInput(
-         session, 
-         "variables", 
-         choices = v ,
-         selected = v[[1]]
-       )
-     })
-       
-     #Générer une liste afin que l'utilisateur puisse choisir les predicteurs 
-     observe({
-       data = credit_fraud_data
-       n = c()
-       for ( i in 1:ncol(credit_fraud_data)){
-         if(is.integer(data[,i]) || is.numeric(data[,i])){
-           n = c(n,i)
-         }
-       }
-       data = data[,n]
-       v<-array(names(data))
-       updateSelectInput(
-         session, 
-         "outcome", 
-         choices = v ,
-         selected = v[[1]]
-       )
-     })
-  }
-  
-  
   makeReactiveBinding("Slider1")
   
   observeEvent(input$Slider1, {
