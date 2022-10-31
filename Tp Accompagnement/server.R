@@ -27,9 +27,13 @@ library(gridExtra)
 library(shinyscreenshot)
 library(ggcorrplot)
 library("caTools")
-#library(Gmisc)
-#library(funModeling) 
-#library(tidyverse) 
+library(Gmisc)
+library(funModeling) 
+library(tidyverse) 
+library(caret)
+library(e1071 )
+library(rpart)
+library(rattle )
 #library(Hmisc)
 
 options(shiny.maxRequestSize=300*1024^2)
@@ -244,6 +248,7 @@ server<-function(input,output,session){
       for (i in 1:length(input$variables)){
         parameter1 = paste(parameter1,"+" , input$variables[i])
       }
+      print(parameter1)
       parameter3 = "binomial"
       parameter <- list(formula= parameter1, data= train_set, family = parameter3, na.action=na.omit)
       shinyalert("Modèle réussi", "Entrainement et test réussis !", "success")
@@ -259,8 +264,198 @@ server<-function(input,output,session){
       summary(lg())
     } 
   })
+  ################################Matrice de confusion###########################################
+  output$tablelg <- renderPrint({
+    ok = Ok()
+    if(ok==TRUE){
+      y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+      pred <- predict(lg(),test_set, type = "response")
+      pred1 <- integer(length =length(pred))
+      pred1[pred > 0.5] <- 1
+      pred1 <- as.factor(pred1) 
+      confusionMatrix(pred1,y)
+    }
+    
+    
+  })
+  ################################### Score de Prediction ############################"
+ 
+   output$scorelg <- renderPrint({
+    ok = Ok()
+    if(ok==TRUE){
+      y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+      pred <- predict(lg(), test_set, type = "response")
+      pred1 <- integer(length =length(pred))
+      pred1[pred > 0.5] <-1
+      pred1 <- as.factor(pred1) 
+      table = table(pred1,y)
+      precision <- posPredValue(pred1, y, positive="1")
+      recall <- sensitivity(pred1, y, positive="1")
+      F1 <- (2 * precision * recall) / (precision + recall)
+      sprintf("Precision: %s  |   Recall: %s    |     F-score: %s", precision, recall, F1)
+    }})
+   
+   ############################## Courbe ROC###########################################
+   
+   output$lgRoc <- renderPlot({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(lg(), test_set ,type = "response")
+       pred1 <- prediction(pred,y)
+       perf <- performance(pred1,"tpr","fpr")
+       plot(perf)
+     }})
+   
+   
+   ########################## AUC ###############################################
+   output$auclg <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(lg(), test_set,type = "response")
+       pred1 <- prediction(pred,y)
+       auc_ROCR <- performance(pred1, measure = "auc")
+       auc_ROCR <- auc_ROCR@y.values[[1]]
+       sprintf("AUC: %s", auc_ROCR)}
+   })
+   
+       ###################### Arbre de Décision ########################################"
+   Svm <- eventReactive(input$demarrage,{
+     ok = Ok()
+     
+     if(ok==TRUE){
+       svm(train_set[,input$variables],as.integer(train_set[,input$outcome]), data= train_set,
+           kernel = 'linear',na.action=na.omit, scale=F)}
+   })
+   
+   output$SVM  <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       svm = Svm()
+       summary(svm)
+     }
+   })
+   
+   output$tablesvm <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(Svm(), test_set[,input$variables], type = "response")
+       pred1 <- integer(length =length(pred))
+       pred1[pred > 0.5] <-1
+       pred1 <- as.factor(pred1) 
+       confusionMatrix(pred1,y)
+     }
+  })
+   
+   output$scoresvm <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(Svm(), test_set[,input$variables], type = "response")
+       pred1 <- integer(length =length(pred))
+       pred1[pred > 0.5] <-1
+       pred1 <- as.factor(pred1) 
+       table = table(pred1,y)
+       precision <- posPredValue(pred1, y, positive="1")
+       recall <- sensitivity(pred1, y, positive="1")
+       F1 <- (2 * precision * recall) / (precision + recall)
+       sprintf("Precision: %s  |   Recall: %s    |     F-score: %s", precision, recall, F1)
+     }
+   })
+   
+   
+   
+   output$svmRoc <- renderPlot({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(Svm(), test_set[,input$variables],type = "response")
+       pred1 <- prediction(pred,y)
+       perf <- performance(pred1,"tpr","fpr")
+       plot(perf)
+     }
+   })
+   
+   output$aucsvm <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(Svm(), test_set[,input$variables],type = "response")
+       pred1 <- prediction(pred,y)
+       auc_ROCR <- performance(pred1, measure = "auc")
+       auc_ROCR <- auc_ROCR@y.values[[1]]
+       sprintf("AUC: %s", auc_ROCR) 
+     }
+   })
+   
+  ################################""" #Arbre de decision##############################################
+   Ad <- eventReactive(input$demarrage,{
+     ok = Ok()
+     if(ok==TRUE){
+       parameter1 = paste(input$outcome ,"~")
+       parameter1 = paste(parameter1 , input$variables[1])
+       for (i in 2:length(input$variables)){
+         parameter1 = paste(parameter1,"+" , input$variables[i])
+       }
+       parameter <- list(formula= parameter1, data= train_set, na.action=na.omit)
+       fastDoCall(rpart, parameter,quote = FALSE)
+       }
+   })
+   
+   output$AD <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       summary(Ad())
+     }
+   })
+     
+   
+   output$tablead <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       ad=Ad()
+       pred <- predict(ad,newdata=test_set[,input$variables],type='matrix',na.action=na.omit)
+       pred1 <- integer(length =length(pred))
+       pred1[pred > 0.5] <-1
+       pred1 <- as.factor(pred1)
+       confusionMatrix(pred1,y)}
+   })
+   
+   
+   output$ad <- renderPlot({
+     ok = Ok()
+     if(ok==TRUE){
+       rpart_model= Ad()
+       plot(rpart_model)
+       text(rpart_model)
+       fancyRpartPlot(rpart_model)}
+   })
+   
+   
+   
+   output$scoread <- renderPrint({
+     ok = Ok()
+     if(ok==TRUE){
+       y <- factor(as.integer(test_set[,input$outcome]),levels=0:1)
+       pred <- predict(Ad(), test_set[,input$variables], type = "matrix")
+       pred1 <- integer(length =length(pred))
+       pred1[pred > 0.5] <-1
+       pred1 <- as.factor(pred1) 
+        precision <- posPredValue(pred1, y, positive="1")
+       recall <- sensitivity(pred1, y, positive="1")
+       F1 <- (2 * precision * recall) / (precision + recall)
+       sprintf("Precision: %s  |   Recall: %s    |     F-score: %s", precision, recall, F1)
+      }
+   })
+         
+   
+   
+
   
-  
+
   
   
   
@@ -693,3 +888,4 @@ server<-function(input,output,session){
   #-----------------------------------------------#
   
 }
+
