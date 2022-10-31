@@ -125,6 +125,33 @@ ui <- dashboardPage(skin="green",
                                         box(width = 12,dataTableOutput("table_credit_fraud_analyse"),
                                           title="Analyse exploratoire des données",
                                           br(),
+                                          # tags$p(strong("Analyse visuelle des variables du jeu de données")),
+                                          # br(),
+                                          # fluidRow(
+                                          #   box(width = 12, title="Cette étude nous donne aussi l'importance jouée par une varialbe, nous pouvons décider de la supprimer ou non, de modifier son type, etc...",
+                                          #     wellPanel(
+                                          #       fluidRow(width=12,
+                                          #        # box(width = 12,
+                                          #        #   column(12,
+                                          #        #      mainPanel(verbatimTextOutput("df_freq"), style="")
+                                          #        #    )
+                                          #        # ),
+                                          #        box(width = 6,
+                                          #          column(12,
+                                          #             mainPanel(plotOutput("df_status"), style="")
+                                          #          )
+                                          #        ),
+                                          #        box(width = 6,
+                                          #          column(12,
+                                          #             mainPanel(plotOutput("df_plot_num"), style="")
+                                          #          )
+                                          #        )
+                                          #       )
+                                          #     ),
+                                          #     collapsible = T
+                                          #   )
+                                          # ),
+                                          br(),
                                           tags$p(strong("quelles sont les dimensions du jeu de données, existe-t’il des valeurs manquantes ou des attributs constants?")),
                                           br(),
                                           fluidRow(
@@ -246,7 +273,17 @@ ui <- dashboardPage(skin="green",
                                         #-----------------------------------------------#
                                         wellPanel(
                                           fluidRow(
-                                            box(width = 7,title="Déséquilibre des classes", column(12,
+                                            box(width = 2 , title="Définir la colonne Target",
+                                              column(12,
+                                               selectizeInput( inputId = "columns_select_target",
+                                                 label = NULL,
+                                                 choices = NULL, 
+                                                 multiple = FALSE,
+                                                 selected = NULL
+                                               )
+                                              )
+                                            ),
+                                            box(width = 4, title="Déséquilibre des classes", column(12,
                                                sliderInput("balance_level", "Régler le problème de déséquilibre à combien de %:",
                                                min = 0, max = 100,
                                                value = 0, step = 5,
@@ -261,16 +298,49 @@ ui <- dashboardPage(skin="green",
                                                 class = "btn btn-sm btn-danger")
                                               )
                                             ),
-                                            box(width = 5 , title="Gérer les valeurs manquantes", column(12,
+                                            box(width = 3 , title="Opérations sur les colonnes",
+                                              column(6,
+                                               selectizeInput(inputId = "columns_select_type",
+                                                 label = NULL,
+                                                 choices = c("integer", "character"), 
+                                                 multiple = FALSE,
+                                                 selected = 1
+                                               )
+                                              ),
+                                              column(6,
+                                               selectizeInput(inputId = "columns_select_list",
+                                                label = NULL,
+                                                choices = NULL, 
+                                                multiple = TRUE,
+                                                selected = NULL
+                                               )
+                                              ),
+                                              column(4,
                                               # Bouton pour gérer les valeurs manquantes
-                                              actionButton("dropAll" ,"Drop All NA", icon("trash"),
-                                                          class = "btn btn-sm btn-success"),
-                                             
-                                              actionButton("replaceAll" ,"Replace All NA", icon("plus"),
-                                                          class = "btn btn-sm btn-primary"),
-                                             
-                                              actionButton("resetAll" ,"Reset", icon("sync"),
-                                                          class = "btn btn-sm btn-danger")
+                                              actionButton("changeType" ,"Change Type", icon("edit"),
+                                                class = "btn btn-sm btn-warning")
+                                              ),
+                                              column(4,
+                                               # Bouton pour gérer les valeurs manquantes
+                                               actionButton("dropColumn" ,"Drop Columns(s)", icon("trash"),
+                                                class = "btn btn-sm btn-danger")
+                                              ),
+                                              column(4,
+                                                 # Bouton pour gérer les valeurs manquantes
+                                                 actionButton("cancelColumn" ,"Cancel", icon("reset"),
+                                                  class = "btn btn-sm btn-primary pull-right")
+                                              )
+                                            ),
+                                            box(width = 3 , title="Gérer les valeurs manquantes", column(12,
+                                               # Bouton pour gérer les valeurs manquantes
+                                               actionButton("dropAll" ,"Drop All NA", icon("trash"),
+                                                            class = "btn btn-sm btn-success"),
+                                               
+                                               actionButton("replaceAll" ,"Replace All NA", icon("plus"),
+                                                            class = "btn btn-sm btn-primary"),
+                                               
+                                               actionButton("resetAll" ,"Reset", icon("sync"),
+                                                            class = "btn btn-sm btn-danger")
                                               )
                                             )
                                           )
@@ -337,9 +407,9 @@ ui <- dashboardPage(skin="green",
                                    wellPanel(
                                      fluidRow(width=12,
                                       box(width = 6,
-                                          column(12, title="Caractéristiques du modèle",
-                                            verbatimTextOutput("logistic_regression"),
-                                          )
+                                        column(12, title="Caractéristiques du modèle",
+                                          verbatimTextOutput("logistic_regression"),
+                                        )
                                       ),
                                       box(width = 6,
                                           column(8),

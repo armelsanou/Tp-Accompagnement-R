@@ -27,9 +27,9 @@ library(gridExtra)
 library(shinyscreenshot)
 library(ggcorrplot)
 library("caTools")
-library(Gmisc)
-library(funModeling) 
-library(tidyverse) 
+#library(Gmisc)
+#library(funModeling) 
+#library(tidyverse) 
 #library(Hmisc)
 
 options(shiny.maxRequestSize=300*1024^2)
@@ -57,6 +57,8 @@ server<-function(input,output,session){
   sliderValue = 0
   train_set <- NULL
   test_set <- NULL
+  targetValues <- NULL
+  errorMessage <- NULL
   
   #function to fill a choosed select
   fillSelect <- function(selectName, listValues, placeHolderMessage) {
@@ -82,6 +84,9 @@ server<-function(input,output,session){
     
     if(stringr::str_ends(input$input_credit_fraud$datapath, "csv")) {
       credit_fraud_data <<- read.csv(input$input_credit_fraud$datapath,header = TRUE, sep=",", stringsAsFactors = FALSE, na.strings = c("","NA"))
+      if (is.null(credit_fraud_data) || length(colnames(credit_fraud_data)) == 1) {
+        credit_fraud_data <<- read.csv(input$input_credit_fraud$datapath,header = TRUE, sep=";", stringsAsFactors = FALSE, na.strings = c("","NA"))
+      }
       if (is.null(credit_fraud_data)) {
         credit_fraud_data <<- read.csv(input$input_credit_fraud$datapath,header = TRUE, sep=";", stringsAsFactors = FALSE, na.strings = c("","NA"))
       }
@@ -89,12 +94,14 @@ server<-function(input,output,session){
       sheet1 <- readxl::read_excel(input$input_credit_fraud$datapath, 1 , na = c("N/A", "n/a"))
       #sheet2 <- readxl::read_excel(input$input_credit_fraud$datapath, 2, na = c("N/A", "n/a"))
       credit_fraud_data <<- data.frame(sheet1, stringsAsFactors = FALSE)
-      credit_fraud_data_initial <<- credit_fraud_data
     }
+    credit_fraud_data_initial <<- credit_fraud_data
     
     if (!is.null(credit_fraud_data)) {
       #fillSelect("outcome", colnames(credit_fraud_data), "Choisir")
       #fillSelect("variables", colnames(credit_fraud_data), "Choisir")
+      fillSelect("columns_select_target", colnames(credit_fraud_data), "Choisir target")
+      fillSelect("columns_select_list", colnames(credit_fraud_data), "Sélectionner")
       #Générer une liste afin que l'utilisateur puisse choisir les variables 
       observe({
         v<-array(names(credit_fraud_data))
@@ -123,6 +130,18 @@ server<-function(input,output,session){
           choices = v ,
           selected = v[1]
         )
+      })
+      
+      output$df_status <- renderPrint({
+        df_status(credit_fraud_data)
+      })
+      
+      output$df_freq<-renderPlot({
+        freq(credit_fraud_data)
+      })
+      
+      output$df_plot_num<-renderPlot({
+        plot_num(credit_fraud_data)
       })
     }
     credit_fraud_data 
@@ -215,31 +234,6 @@ server<-function(input,output,session){
   
   #####################Logistic regression###################
   
-  # lg <- eventReactive(input$demarrage,{
-  #   print("call lg")
-  #   print(train_set)
-  #   ok = Ok()
-  #   if(ok==TRUE){
-  #     parameter1 = paste(input$outcome ,"~")
-  #     parameter1 = paste(parameter1 , input$variables[1])
-  #     
-  #     for (i in 2:length(input$variables)){
-  #       parameter1 = paste(parameter1,"+" , input$variables[i])
-  #     }
-  #     
-  #     parameter3 = "binomial"
-  #     parameter <- list(formula= parameter1, data= train_set,family=parameter3, na.action=na.omit)
-  #     
-  #     fastDoCall(glm, parameter,quote = FALSE)
-  #     
-  #     
-  #   }else {
-  #     
-  #     return(NULL)
-  #     
-  #   }
-  # })
-  
   lg <- eventReactive(input$demarrage,{
     ok = checkParams()
     if(ok==TRUE){
@@ -265,5 +259,437 @@ server<-function(input,output,session){
       summary(lg())
     } 
   })
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  ##################### Over Simpling / Under Simpling ###################
+  
+  #-----------------------------------------------#
+  #--------------DEBUT TRAITEMENTS DATA A&R-------#
+  #-----------------------------------------------#
+  
+  observeEvent(input$columns_select_target, {
+    if (!is.null(credit_fraud_data)) {
+      val <- unique(credit_fraud_data[c(input$columns_select_target)])
+      if (nrow(val) > 2) {
+        errorMessage <<- "Il y a trop de valeurs distinctes dans cette colonne"
+      }else{
+        if (nrow(val) == 2) {
+          targetValues <<- c(val[1, input$columns_select_target], val[2, input$columns_select_target])
+          errorMessage <<- NULL
+        }else{
+          errorMessage <<- "Cette colonne n'a pas assez de données"
+        }
+      }
+    }
+  })
+  
+  #Drop all NA values
+  observeEvent(input$dropAll, {
+    if (!is.null(credit_fraud_data)) {
+      
+      #get all not empty values
+      credit_fraud_data <<- na.omit(credit_fraud_data)
+      
+      #sync data
+      data_credit_fraud<- eventReactive(input$input_credit_fraud, {
+        credit_fraud_data
+      })
+      
+      #displaying on the screen
+      output$table_credit_fraud<-DT::renderDataTable({
+        tmp.dat <- data_credit_fraud()
+        DT::datatable(
+          tmp.dat, extensions = 'Buttons',
+          options = list(dom = 'Blfrtip', scrollX = TRUE, buttons = 
+           list(list(
+              extend = "collection",
+              text = 'Show All',
+              action = DT::JS("function ( e, dt, node, config ) {
+              dt.page.len(-1);
+              dt.ajax.reload();
+          }")
+         ),
+         'copy', 'csv', list(
+           extend = 'excel',
+           filename = 'fichier de chargement credit_fraud',
+           title = NULL,
+           pageLength = 15,
+           exportOptions = list(columns = c(1:length(credit_fraud_data)))
+         ),list(extend = 'colvis', columns = c(1:length(colnames(credit_fraud_data)))))),filter='top'
+        )
+      })
+      shinyalert("Effectué avec succès !", "Vous pouvez voir les modifications dans l'onglet jeu de donées", type = "success")
+    }else{
+      shinyalert("Oops!", "Veuillez charger un dataset", type = "error")
+    }
+  })
+  
+  #Replace all NA values
+  observeEvent(input$replaceAll, {
+    if (!is.null(credit_fraud_data)) {
+      
+      #get all cells where empty values are
+      tabNa<-which(is.na(credit_fraud_data),arr.ind=TRUE)
+      
+      if (length(tabNa) > 0) {
+        
+        #replace all other lines
+        for (i in 1:dim(credit_fraud_data)[2]){
+          if ( is.na(credit_fraud_data[1,i]))
+          {
+            j<-2
+            while(is.na(credit_fraud_data[j,i])){
+              j<-j+1
+            }
+            credit_fraud_data[1,i]<<-credit_fraud_data[j,i]
+          }
+        }
+        
+        #replace all other lines
+        for (i in 1:(length(tabNa)/2)){
+          ligne<-tabNa[i,1]
+          colonne<-tabNa[i,2]
+          if(ligne > 1){
+            credit_fraud_data[ligne,colonne]<<-credit_fraud_data[ligne-1,colonne]
+          }
+        }
+        
+        #sync data
+        data_credit_fraud<- eventReactive(input$input_credit_fraud, {
+          credit_fraud_data
+        })
+        
+        #displaying on the screen
+        output$table_credit_fraud<-DT::renderDataTable({
+          tmp.dat <- data_credit_fraud()
+          DT::datatable(
+            tmp.dat, extensions = 'Buttons',
+            options = list(dom = 'Blfrtip', scrollX = TRUE, buttons = 
+             list(list(
+                extend = "collection",
+                text = 'Show All',
+                action = DT::JS("function ( e, dt, node, config ) {
+                dt.page.len(-1);
+                dt.ajax.reload();
+            }")
+           ),
+           'copy', 'csv', list(
+             extend = 'excel',
+             filename = 'fichier de chargement credit_fraud',
+             title = NULL,
+             pageLength = 15,
+             exportOptions = list(columns = c(1:length(credit_fraud_data)))
+           ),list(extend = 'colvis', columns = c(1:length(colnames(credit_fraud_data)))))),filter='top'
+          )
+        })
+        print(dim(credit_fraud_data))
+        shinyalert("Effectué avec succès!", "Vous pouvez voir les modifications dans l'onglet jeu de données", type = "success")
+      }else{
+        shinyalert("Information!", "Il y a pas de valeurs manquantes dans ce jeu de données", type = "warning")
+      }
+      
+    }else{
+      shinyalert("Oops!", "Veuillez d'abord charger un dataset", type = "error")
+    }
+    
+  })
+  
+  #reset dataset
+  observeEvent(input$resetAll, {
+    if (!is.null(credit_fraud_data)) {
+      
+      credit_fraud_data <<- credit_fraud_data_initial
+      
+      
+      fillSelect("columns_select_list", colnames(credit_fraud_data_initial), "Sélectionner")
+      
+      #sync data
+      data_credit_fraud<- eventReactive(input$input_credit_fraud, {
+        credit_fraud_data
+      })
+      
+      #displaying on the screen
+      output$table_credit_fraud<-DT::renderDataTable({
+        tmp.dat <- data_credit_fraud()
+        DT::datatable(
+          tmp.dat, extensions = 'Buttons',
+          options = list(dom = 'Blfrtip', scrollX = TRUE, buttons = 
+           list(list(
+              extend = "collection",
+              text = 'Show All',
+              action = DT::JS("function ( e, dt, node, config ) {
+              dt.page.len(-1);
+              dt.ajax.reload();
+          }")
+         ),
+         'copy', 'csv', list(
+           extend = 'excel',
+           filename = 'fichier de chargement credit_fraud',
+           title = NULL,
+           pageLength = 15,
+           exportOptions = list(columns = c(1:length(credit_fraud_data)))
+         ),list(extend = 'colvis', columns = c(1:length(colnames(credit_fraud_data)))))),filter='top'
+        )
+      })
+    }
+  })
+  
+  observeEvent(input$remove_all, {
+    updateSelectizeInput(session,"columns_select",choices=sort(unique(categorial_columns_list)), 
+     selected=NULL, options = list(placeholder="Please Select at Least One Column")
+    )
+  })
+  
+  makeReactiveBinding("balance_level")
+  
+  observeEvent(input$balance_level, {
+    balance_level <<- input$balance_level
+    balance_level <<- as.integer(balance_level)
+  })
+  
+  
+  #Balance data
+  observeEvent(input$balance_add, {
+    
+    print(targetValues)
+    
+    if (!is.null(credit_fraud_data) && is.null(errorMessage)) {
+      
+      balanced_dataset <- NULL
+      
+      #Count occurence
+      occ0<<-sum(credit_fraud_data[input$columns_select_target] == targetValues[1])
+      
+      occ1<<-sum(credit_fraud_data[input$columns_select_target] == targetValues[2])
+      
+      
+      # get only rows that have 0 on target column
+      dataset_zero_values_on_target <- filter(credit_fraud_data, input$columns_select_target == targetValues[1])
+      
+      # get only rows that have 1 on target column
+      dataset_one_values_on_target <- filter(credit_fraud_data, input$columns_select_target == targetValues[2])
+      
+      if (occ1 < occ0) {
+        difference <<- occ0 - occ1
+      }else{
+        difference <<- occ1 - occ0
+      }
+      print("------ occurence de 1 ------")
+      print(occ1)
+      
+      print("------ occurence de 0 ------")
+      print(occ0)
+      
+      print("----- difference d'occurence de 1 et 0 -----")
+      print(difference)
+      
+      #apply value on slider input
+      balance_value = as.integer((balance_level * difference) / 100)  #this is the number of rows we are going to add into datased to make it balanced
+      
+      print("----- nombre de lignes à ajouter -----")
+      print(balance_value)
+      
+      #if we have more 0 than 1
+      if (occ1 < occ0) {
+        ajusted_data <<- dataset_one_values_on_target[sample(nrow(dataset_one_values_on_target), balance_value, replace = TRUE, prob = NULL), ]
+      }else{ #if not
+        ajusted_data <<- dataset_zero_values_on_target[sample(nrow(dataset_zero_values_on_target), balance_value), ]
+      }
+      balanced_dataset <- rbind(credit_fraud_data, ajusted_data)
+      print(dim(balanced_dataset))
+      
+      print("***** Voir l'équilibre *****")
+      print(sum(balanced_dataset[input$columns_select_target] == targetValues[1]))
+      print(sum(balanced_dataset[input$columns_select_target] == targetValues[2]))
+      
+      credit_fraud_data <<- balanced_dataset
+      
+      #Refreshing view
+      #sync data
+      data_credit_fraud<- eventReactive(input$input_credit_fraud, {
+        credit_fraud_data
+      })
+      
+      #displaying on the screen
+      output$table_credit_fraud<-DT::renderDataTable({
+        tmp.dat <- data_credit_fraud()
+        DT::datatable(
+          tmp.dat, extensions = 'Buttons',
+          options = list(dom = 'Blfrtip', scrollX = TRUE, buttons = 
+           list(list(
+              extend = "collection",
+              text = 'Show All',
+              action = DT::JS("function ( e, dt, node, config ) {
+              dt.page.len(-1);
+              dt.ajax.reload();
+          }")
+         ),
+         'copy', 'csv', list(
+           extend = 'excel',
+           filename = 'fichier de chargement credit_fraud',
+           title = NULL,
+           pageLength = 15,
+           exportOptions = list(columns = c(1:length(credit_fraud_data)))
+         ),list(extend = 'colvis', columns = c(1:length(colnames(credit_fraud_data)))))),filter='top'
+        )
+      })
+      shinyalert("Ajout de données réussi!", "Vous pouvez voir les modifications dans l'onglet jeu de données", type = "success")
+      
+      
+    }else{
+      shinyalert("Oops!", errorMessage, type = "error")
+    }
+  })
+  
+  
+  #Déséquilibre
+  observeEvent(input$balance_delete, {
+    if (!is.null(credit_fraud_data) && is.null(errorMessage)) {
+  
+      #Count occurence
+      occ0<<-sum(credit_fraud_data[input$columns_select_target] == targetValues[1])
+      occ1<<-sum(credit_fraud_data[input$columns_select_target] == targetValues[2])
+      
+      
+      # get only rows that have 0 on target column
+      dataset_zero_values_on_target <- filter(credit_fraud_data, input$columns_select_target == targetValues[1])
+      
+      # get only rows that have 1 on target column
+      dataset_one_values_on_target <- filter(credit_fraud_data, input$columns_select_target == targetValues[2])
+      
+      print("dim")
+      print(dim(dataset_one_values_on_target)[1])
+      
+      if (occ1 < occ0) {
+        difference <<- occ0 - occ1
+      }else{
+        difference <<- occ1 - occ0
+      }
+      print("------ occurence de 1 ------")
+      print(occ1)
+      
+      print("------ occurence de 0 ------")
+      print(occ0)
+      
+      print("----- difference d'occurence de 1 et 0 -----")
+      print(difference)
+      
+      #apply value on slider input
+      balance_value = as.integer((balance_level * difference) / 100)  #this is the number of rows we are going to add into datased to make it balanced
+      
+      print("----- nombre de lignes à supprimer -----")
+      print(balance_value)
+      
+      #if we have more 0 than 1
+      if (occ1 < occ0) {
+        ajusted_data <<- tail(dataset_zero_values_on_target, n=dim(dataset_zero_values_on_target)[1]-balance_value)
+        balanced_dataset <- rbind(dataset_one_values_on_target, ajusted_data)
+      }else{ #if not
+        ajusted_data <<- tail(dataset_one_values_on_target, n=dim(dataset_one_values_on_target)[1]-balance_value)
+        balanced_dataset <- rbind(dataset_zero_values_on_target, ajusted_data)
+      }
+      print(dim(balanced_dataset))
+      credit_fraud_data <<- balanced_dataset
+      
+      print("***** Voir l'équilibre *****")
+      print(sum(balanced_dataset[input$columns_select_target] == targetValues[1]))
+      print(sum(balanced_dataset[input$columns_select_target] == targetValues[2]))
+      
+      #Refreshing view
+      data<- eventReactive(input$input_credit_fraud, {
+        credit_fraud_data
+      })
+      
+      #displaying on the screen
+      output$table<-DT::renderDataTable({
+        tmp.dat <- data()
+        DT::datatable(tmp.dat, 
+        options = list(scrollX = TRUE),filter='top')
+      })
+      shinyalert("Suppression de données réussi!", "Vous pouvez voir les modifications dans l'onglet jeu de donées", type = "success")
+      
+    }else{
+      shinyalert("Oops!", errorMessage, type = "error")
+    }
+  })
+  
+  observeEvent(input$cancelColumn, {
+    if (!is.null(credit_fraud_data_initial)) {
+      credit_fraud_data <<- credit_fraud_data_initial
+      fillSelect("columns_select_list", colnames(credit_fraud_data_initial), "Sélectionner")
+      #syncing data
+      data<- eventReactive(input$input_credit_fraud, {
+        credit_fraud_data_initial
+      })
+      
+      #displaying on the screen
+      output$table<-DT::renderDataTable({
+        tmp.dat <- data()
+        DT::datatable(tmp.dat, 
+        options = list(scrollX = TRUE),filter='top')
+      })
+    }else{
+      shinyalert("Oops!", "Veuillez gérer les valeurs manquantes", type = "error")
+    }
+  })
+  
+  observeEvent(input$dropColumn, {
+    if (!is.null(credit_fraud_data)) {
+      credit_fraud_data <<- credit_fraud_data[ , !names(credit_fraud_data) %in% c(input$columns_select_list)]
+      fillSelect("columns_select_list", colnames(credit_fraud_data), "Sélectionner")
+      print(credit_fraud_data)
+      output$table_credit_fraud<-DT::renderDataTable({
+        tmp.dat <- credit_fraud_data
+        DT::datatable(
+          tmp.dat, extensions = 'Buttons',
+          options = list(dom = 'Blfrtip', scrollX = TRUE, buttons = 
+          list(list(
+            extend = "collection",
+            text = 'Show All',
+            action = DT::JS("function ( e, dt, node, config ) {
+            dt.page.len(-1);
+            dt.ajax.reload();
+        }")
+         ),
+         'copy', 'csv', list(
+           extend = 'excel',
+           filename = 'fichier de chargement credit_fraud',
+           title = NULL,
+           pageLength = 15,
+           exportOptions = list(columns = c(1:length(credit_fraud_data)))
+         ),list(extend = 'colvis', columns = c(1:length(colnames(credit_fraud_data)))))),filter='top'
+        )
+      })
+    }else{
+      shinyalert("Oops!", "Veuillez gérer les valeurs manquantes", type = "error")
+    }
+  })
+  #-----------------------------------------------#
+  #--------------FIN TRAITEMENTS DATA A&R---------#
+  #-----------------------------------------------#
   
 }
