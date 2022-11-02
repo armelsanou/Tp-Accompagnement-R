@@ -226,20 +226,16 @@ server<-function(input,output,session){
   #J'aurais tendance à dire qu'une variable qui n'a que 3% de valeurs uniques pourrait être qualifiée de discrète mais, c'est subjectif.
   getDiscretesColumns <- function(dataset, datasetSize){
     seuil <- 36/10000
-    print(seuil)
-    print(paste("called", datasetSize, seuil*datasetSize))
     numData <- dataset[dataset$type == "numeric" | dataset$type == "integer", ]
-    #print(numData)
     if (nrow(numData) > 0) {
       discretesData <- numData[numData["unique"] <= ((seuil*datasetSize)), ]
       if (nrow(discretesData) > 0) {
-        print(colnames(discretesData))
-        return(colnames(discretesData))
+        return(as.vector(discretesData["variable"]))
       }else{
         return(NULL)
       }
     }else{
-      return("IL y a pas du quantitatif dans les données")
+      return("Il y a pas du quantitatif dans les données")
     }
   }
   
@@ -264,7 +260,6 @@ server<-function(input,output,session){
   computeCorr <- function(d){
     data <- d[, sapply(d, class) %in% c('numeric', 'integer')]
     if (!is.null(data)) {
-      print("il a des numériques")
       correlation_matrix <- round(cor(data),1)
       return(
         ggcorrplot(correlation_matrix, hc.order = TRUE, type = "lower", lab = TRUE) + theme(text = element_text(size = 20, face = "bold"),
@@ -274,7 +269,6 @@ server<-function(input,output,session){
         legend.text=element_text(size=15),axis.text.y = element_text(size=10, face = "bold"),axis.text.x = element_text(size=10, face= "bold"))
       )
     }else{
-      print("il a  pas des numériques")
       return("Il y a pas de colonnes numériques dans ce jeu de données")
     }
   }
@@ -391,7 +385,6 @@ server<-function(input,output,session){
         quant <- getDiscretesColumns(tempData, nrow(credit_fraud_data))
         print(c(quant))
         if (!is.null(getDiscretesColumns(tempData, nrow(credit_fraud_data)))) {
-          print("il y en a")
           credit_fraud_num_columns_list <<- credit_fraud_num_columns_list[!credit_fraud_num_columns_list %in% c(quant)]
         }
         fillSelect("num_columns_select_credit_fraud", credit_fraud_num_columns_list, "Veuillez choisir un champ")
@@ -399,7 +392,17 @@ server<-function(input,output,session){
       
       #quant <- getDiscretesColumns(tempData, nrow(credit_fraud_data))
       
-      fillSelect("quant_columns_select_credit_fraud", c(getDiscretesColumns(tempData, nrow(credit_fraud_data))), "Choisir une colonne")
+      #fillSelect("quant_columns_select_credit_fraud", c(getDiscretesColumns(tempData, nrow(credit_fraud_data))), "Choisir une colonne")
+      
+      observe({
+        v = getDiscretesColumns(tempData, nrow(credit_fraud_data))
+        updateSelectInput(
+          session, 
+          "quant_columns_select_credit_fraud", 
+          choices = v,
+          selected = v[1]
+        )
+      })
       
       numColumns <- tempData[tempData$type == "numeric" | tempData$type == "integer", ]
       
@@ -763,47 +766,54 @@ server<-function(input,output,session){
   ########Plot graphics###########
    
    observeEvent(input$num_columns_select_credit_fraud, {
-     col <- input$num_columns_select_credit_fraud
-     target <- input$columns_select_target
-     output$output_title_num_credit <- renderText({
-       paste("Graphe adapté pour la colonne ", input$num_columns_select_credit_fraud)
-     })
-     if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
-       output$plot_zone_num_credit_card<-renderPlot({
-         plotContinualVariables(credit_fraud_data[[col]], credit_fraud_data[[target]], credit_fraud_data, paste('Repartition de la variable', input$num_columns_select_credit_fraud, ' par rapport au churn'), target)
+     if (!is.null(credit_fraud_data)) {
+       col <- input$num_columns_select_credit_fraud
+       target <- input$columns_select_target
+       output$output_title_num_credit <- renderText({
+         paste("Graphe adapté pour la colonne ", input$num_columns_select_credit_fraud)
        })
+       if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
+         output$plot_zone_num_credit_card<-renderPlot({
+           plotContinualVariables(credit_fraud_data[[col]], credit_fraud_data[[target]], credit_fraud_data, paste('Repartition de la variable', input$num_columns_select_credit_fraud, ' par rapport au churn'), target)
+         })
+       }
      }
    })
    
-   # observeEvent(input$quant_columns_select_credit_fraud, {
-   #   col <- input$quant_columns_select_credit_fraud
-   #   target <- input$columns_select_target
-   #   output$output_title_quant_credit <- renderText({
-   #     paste("Graphe adapté pour la colonne ", input$quant_columns_select_credit_fraud)
-   #   })
-   #   if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
-   #     output$plot_zone_quant_credit_card<-renderPlot({
-   #       credit_fraud_data %>%
-   #         ggplot() +
-   #         aes(x = credit_fraud_data[[col]]) +
-   #         geom_bar() +
-   #         facet_grid(credit_fraud_data[[target]] ~ .,
-   #                    scales = "free_y") +
-   #         scale_x_continuous(breaks = seq(0, 50, 5))
-   #     })
-   #   }
-   # })
+   observeEvent(input$quant_columns_select_credit_fraud, {
+     if (!is.null(credit_fraud_data)) {
+       col = input$quant_columns_select_credit_fraud
+       target <- input$columns_select_target
+       print(credit_fraud_data[target])
+       output$output_title_quant_credit <- renderText({
+         paste("Graphe adapté pour la colonne ", input$quant_columns_select_credit_fraud)
+       })
+       if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
+         output$plot_zone_quant_credit_card<-renderPlot({
+           credit_fraud_data %>%
+             ggplot() +
+             aes(x = col) +
+             geom_bar() +
+             facet_grid(target ~ .,
+                        scales = "free_y") +
+             scale_x_continuous(breaks = seq(0, 50, 5))
+         })
+       }
+     }
+   })
    
    observeEvent(input$cat_columns_select_credit_fraud, {
-     col <- input$cat_columns_select_credit_fraud
-     target <- input$columns_select_target
-     output$output_title_cat_credit <- renderText({
-       paste("Graphe adapté pour la colonne ", input$cat_columns_select_credit_fraud)
-     })
-     if (!is.na(col) && col != "" && !is.null(credit_fraud_categorial_columns_list)) {
-       output$plot_zone_cat_credit_card<-renderPlot({
-         plotCategoriel(credit_fraud_data, credit_fraud_data[[col]], credit_fraud_data[[target]], col, "Count", paste("Repartition churn vs non churn par rapport à la variable", col))
+     if (!is.null(credit_fraud_data)) {
+       col <- input$cat_columns_select_credit_fraud
+       target <- input$columns_select_target
+       output$output_title_cat_credit <- renderText({
+         paste("Graphe adapté pour la colonne ", input$cat_columns_select_credit_fraud)
        })
+       if (!is.na(col) && col != "" && !is.null(credit_fraud_categorial_columns_list)) {
+         output$plot_zone_cat_credit_card<-renderPlot({
+           plotCategoriel(credit_fraud_data, credit_fraud_data[[col]], credit_fraud_data[[target]], col, "Count", paste("Repartition churn vs non churn par rapport à la variable", col))
+         })
+       }
      }
    })
    
