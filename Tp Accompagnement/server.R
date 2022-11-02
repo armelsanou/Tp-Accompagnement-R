@@ -201,7 +201,7 @@ server<-function(input,output,session){
       if(length(cols) > 0){
         return(cols[!(cols %in% c(target))])
       }else{
-        return(NULL)
+        return("Il y a pas du quantitatif dans les données")
       }
     }
     return(NULL)
