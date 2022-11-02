@@ -34,19 +34,18 @@ library(ggcorrplot)
 #library(e1071 )
 #library(rpart)
 #library(rattle )
-library(Hmisc)
-library(ROCR)
-conflicted::conflict_prefer("col_factor", "readr")
- conflicted::conflict_prefer("combine", "gridExtra")
- conflicted::conflict_prefer("discard", "purrr")
- conflicted::conflict_prefer("filter", "dplyr")
- conflicted::conflict_prefer("ident", "dbplyr")
- conflicted::conflict_prefer("lag", "dplyr")
- conflicted::conflict_prefer("select", "MASS")
- conflicted::conflict_prefer("sql", "dbplyr")
- conflicted::conflict_prefer("src", "dplyr")
- conflicted::conflict_prefer("summarize", "dplyr")
- conflicted::conflict_prefer("box", "shinydashboard")
+#library(Hmisc)
+#library(ROCR)
+# conflicted::conflict_prefer("col_factor", "readr")
+# conflicted::conflict_prefer("combine", "gridExtra")
+# conflicted::conflict_prefer("discard", "purrr")
+# conflicted::conflict_prefer("filter", "dplyr")
+# conflicted::conflict_prefer("ident", "dbplyr")
+# conflicted::conflict_prefer("lag", "dplyr")
+# conflicted::conflict_prefer("select", "MASS")
+# conflicted::conflict_prefer("sql", "dbplyr")
+# conflicted::conflict_prefer("src", "dplyr")
+# conflicted::conflict_prefer("summarize", "dplyr")
 
 options(shiny.maxRequestSize=300*1024^2)
 server<-function(input,output,session){
@@ -225,14 +224,10 @@ server<-function(input,output,session){
   #J'aurais tendance à dire qu'une variable qui n'a que 3% de valeurs uniques pourrait être qualifiée de discrète mais, c'est subjectif.
   getDiscretesColumns <- function(dataset, datasetSize){
     seuil <- 36/10000
-    print(seuil)
-    print(paste("called", datasetSize, seuil*datasetSize))
     numData <- dataset[dataset$type == "numeric" | dataset$type == "integer", ]
-    #print(numData)
     if (nrow(numData) > 0) {
       discretesData <- numData[numData["unique"] <= ((seuil*datasetSize)), ]
       if (nrow(discretesData) > 0) {
-        print(colnames(discretesData))
         return(colnames(discretesData))
       }else{
         return(NULL)
@@ -256,14 +251,13 @@ server<-function(input,output,session){
   
   #Fonction pour afficher les données cas numérique continu
   plotContinualVariables <- function(colname, targetName, dataset, message, labelMessage){
-    return(boxplot(formula=colname ~ targetName, data=dataset, ylim=c(-50, 50), cex.axis=.6, ylab = message, xlab = labelMessage))
+    return(boxplot(formula=colname ~ targetName, data=dataset, ylim=c(-10, 10), cex.axis=.6, ylab = message, xlab = labelMessage))
   }
   
   #Function to compute correlation matrix and drow result
   computeCorr <- function(d){
     data <- d[, sapply(d, class) %in% c('numeric', 'integer')]
     if (!is.null(data)) {
-      print("il a des numériques")
       correlation_matrix <- round(cor(data),1)
       return(
         ggcorrplot(correlation_matrix, hc.order = TRUE, type = "lower", lab = TRUE) + theme(text = element_text(size = 20, face = "bold"),
@@ -273,7 +267,6 @@ server<-function(input,output,session){
         legend.text=element_text(size=15),axis.text.y = element_text(size=10, face = "bold"),axis.text.x = element_text(size=10, face= "bold"))
       )
     }else{
-      print("il a  pas des numériques")
       return("Il y a pas de colonnes numériques dans ce jeu de données")
     }
   }
@@ -334,9 +327,9 @@ server<-function(input,output,session){
         )
       })
       
-      output$df_status <- renderPlot({
-        df_status(credit_fraud_data)
-      })
+      # output$df_status <- renderPlot({
+      #   df_status(credit_fraud_data)
+      # })
       # 
       # output$df_freq<-renderPlot({
       #   freq(credit_fraud_data)
@@ -390,15 +383,14 @@ server<-function(input,output,session){
         quant <- getDiscretesColumns(tempData, nrow(credit_fraud_data))
         print(c(quant))
         if (!is.null(getDiscretesColumns(tempData, nrow(credit_fraud_data)))) {
-          print("il y en a")
           credit_fraud_num_columns_list <<- credit_fraud_num_columns_list[!credit_fraud_num_columns_list %in% c(quant)]
         }
         fillSelect("num_columns_select_credit_fraud", credit_fraud_num_columns_list, "Veuillez choisir un champ")
       }
       
-      #quant <- getDiscretesColumns(tempData, nrow(credit_fraud_data))
+      quant <- getDiscretesColumns(tempData, nrow(credit_fraud_data))
       
-      fillSelect("quant_columns_select_credit_fraud", c(getDiscretesColumns(tempData, nrow(credit_fraud_data))), "Choisir une colonne")
+      fillSelect("quant_columns_select_credit_fraud", c(quant), "Choisir une colonne")
       
       numColumns <- tempData[tempData$type == "numeric" | tempData$type == "integer", ]
       
@@ -415,7 +407,7 @@ server<-function(input,output,session){
         })
       }
     }
-    credit_fraud_data 
+    credit_fraud_data
   })
   
   output$table_credit_fraud<-DT::renderDataTable({
@@ -774,24 +766,24 @@ server<-function(input,output,session){
      }
    })
    
-   # observeEvent(input$quant_columns_select_credit_fraud, {
-   #   col <- input$quant_columns_select_credit_fraud
-   #   target <- input$columns_select_target
-   #   output$output_title_quant_credit <- renderText({
-   #     paste("Graphe adapté pour la colonne ", input$quant_columns_select_credit_fraud)
-   #   })
-   #   if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
-   #     output$plot_zone_quant_credit_card<-renderPlot({
-   #       credit_fraud_data %>%
-   #         ggplot() +
-   #         aes(x = credit_fraud_data[[col]]) +
-   #         geom_bar() +
-   #         facet_grid(credit_fraud_data[[target]] ~ .,
-   #                    scales = "free_y") +
-   #         scale_x_continuous(breaks = seq(0, 50, 5))
-   #     })
-   #   }
-   # })
+   observeEvent(input$quant_columns_select_credit_fraud, {
+     col <- input$quant_columns_select_credit_fraud
+     target <- input$columns_select_target
+     output$output_title_quant_credit <- renderText({
+       paste("Graphe adapté pour la colonne ", input$quant_columns_select_credit_fraud)
+     })
+     # if (!is.na(col) && col != "" && !is.null(credit_fraud_num_columns_list)) {
+     #   output$plot_zone_quant_credit_card<-renderPlot({
+     #     credit_fraud_data %>%
+     #       ggplot() +
+     #       aes(x = `col`) +
+     #       geom_bar() +
+     #       facet_grid(credit_fraud_data$target ~ .,
+     #                  scales = "free_y") +
+     #       scale_x_continuous(breaks = seq(0, 50, 5))
+     #   })
+     # }
+   })
    
    observeEvent(input$cat_columns_select_credit_fraud, {
      col <- input$cat_columns_select_credit_fraud

@@ -125,32 +125,35 @@ ui <- dashboardPage(skin="green",
                                         box(width = 12,dataTableOutput("table_credit_fraud_analyse"),
                                           title="Analyse exploratoire des données",
                                           br(),
-                                          # tags$p(strong("Analyse visuelle des variables du jeu de données")),
-                                          # br(),
-                                          # fluidRow(
-                                          #   box(width = 12, title="Cette étude nous donne aussi l'importance jouée par une varialbe, nous pouvons décider de la supprimer ou non, de modifier son type, etc...",
-                                          #     wellPanel(
-                                          #       fluidRow(width=12,
-                                          #        # box(width = 12,
-                                          #        #   column(12,
-                                          #        #      mainPanel(verbatimTextOutput("df_freq"), style="")
-                                          #        #    )
-                                          #        # ),
-                                          #        box(width = 6,
-                                          #          column(12,
-                                          #             mainPanel(plotOutput("df_status"), style="")
-                                          #          )
-                                          #        ),
-                                          #        box(width = 6,
-                                          #          column(12,
-                                          #             mainPanel(plotOutput("df_plot_num"), style="")
-                                          #          )
-                                          #        )
-                                          #       )
-                                          #     ),
-                                          #     collapsible = T
-                                          #   )
-                                          # ),
+                                          tags$p(strong("Analyse visuelle des variables du jeu de données")),
+                                          br(),
+                                          fluidRow(
+                                            box(width = 12, title="Cette étude nous donne aussi l'importance jouée par une varialbe, nous pouvons décider de la supprimer ou non, de modifier son type, etc...",
+                                              wellPanel(
+                                                fluidRow(width=12,
+                                                 # box(width = 12,
+                                                 #   column(12,
+                                                 #      mainPanel(verbatimTextOutput("df_freq"), style="")
+                                                 #    )
+                                                 # ),
+                                                 box(width = 6,
+                                                   column(12,
+                                                      mainPanel(verbatimTextOutput("df_status"), style="")
+                                                   )
+                                                 ),
+                                                 # box(width = 6,
+                                                 #   column(12,
+                                                 #      mainPanel(plotOutput("df_plot_num"), style="")
+                                                 #   )
+                                                 # )
+                                                )
+                                              ),
+                                              collapsible = T
+                                            )
+                                          ),
+                                          br(),
+                                          tags$h3(strong("Veuillez renseigner la colonne target au niveau de l'échantillonnage afin de mettre à jour les graphiques"), style="color: red;"),
+                                          
                                           br(),
                                           tags$p(strong("quelles sont les dimensions du jeu de données, existe-t’il des valeurs manquantes ou des attributs constants?")),
                                           br(),
@@ -182,6 +185,9 @@ ui <- dashboardPage(skin="green",
                                         ),
                                         br(),
                                         tags$p(strong("affichez à l’aide un graphe adapté la proportion d’individus qui ont churné")),
+                                        
+                                        br(),
+                                        tags$h4(strong(textOutput("error_target")), style="color: green;"),
                                         
                                         #afficher le pie
                                         br(),
@@ -221,7 +227,7 @@ ui <- dashboardPage(skin="green",
                                         tags$p(strong("pour chaque variable numérique, affichez séparemment à l’aide un graphe adapté (eg.histogramme) les valeurs pour les populations churn & non churn")),
                                         
                                         fluidRow(
-                                          box(width = 6, title = "Choisir la colonne cible", column(12,
+                                          box(width = 6, title = "Cas quantitatif continu", column(12,
                                             fluidRow(
                                               #Liste des colonnes du dataset
                                               column(6,
@@ -247,11 +253,40 @@ ui <- dashboardPage(skin="green",
                                           )
                                         ),
                                         
+                                        fluidRow(
+                                          box(width = 6, title = "Cas quantitatif discret", column(12,
+                                              fluidRow(
+                                                #Liste des colonnes du dataset
+                                                column(6,
+                                                 selectizeInput( inputId = "quant_columns_select_credit_fraud",
+                                                   label = NULL,
+                                                   choices = NULL, 
+                                                   multiple = FALSE,
+                                                   selected = NULL
+                                                 )
+                                                ),
+                                                column(6,
+                                                 # Bouton pour déselectionner
+                                                  actionButton("remove_selected_quant_credit_card" ,"Annuler", icon("trash"),
+                                                  style = "color: #FFFFFF; background-color: #CA001B; border_color: #CA001B"))
+                                              )
+                                            )
+                                          ),
+                                          #ici opérations sur les deux jeux de données
+                                          box(width = 6, title = textOutput("output_title_quant_credit"),  column(12, 
+                                              # Partie resultats
+                                              column(12,mainPanel(plotOutput("plot_zone_quant_credit_card"), style="heigth: auto;"))
+                                            )
+                                          )
+                                        ),
+                                        
                                         br(),
                                         tags$p(strong("affichez la matrice de corrélation des attributs")),
                                         fluidRow(
                                           box(width = 12, title = "Matrice de correlation", style="heigth: auto;", column(12,
-                                              column(12,mainPanel(plotOutput("plot_zone_corr_credit_card"), style="heigth: auto;"))
+                                              br(),
+                                              tags$h4(strong(textOutput("error_correlation")), style="color: red;"),
+                                              mainPanel(plotOutput("plot_zone_corr_credit_card"), style="heigth: auto;")
                                             )
                                           )
                                         ),
@@ -458,31 +493,31 @@ ui <- dashboardPage(skin="green",
                                    wellPanel(
                                      
                                      fluidRow(width=12,
-                                              box(width = 6,
-                                                  column(12, title="Caractéristiques du modèle",
-                                                         verbatimTextOutput("SVM"),),
-                                                  column(4)
-                                              ),
-                                              box(width = 6,
-                                                  column(12,title="Matrice de Confusion",
-                                                         verbatimTextOutput("tablesvm"),),
-                                                  column(4)
-                                              ),
-                                              box(width = 6,
-                                                  column(12,title="Score de prédiction",
-                                                         verbatimTextOutput("scoresvm"),),
-                                                  column(4)
-                                              ),
-                                              box(width = 6,
-                                                  column(12, title ="Courbe ROC",
-                                                         plotOutput("svmRoc",width = "100%", height = "500px"),),
-                                                  column(4)
-                                              ),
-                                              box(width = 6,
-                                                  column(12, title ="AUC",
-                                                         verbatimTextOutput("aucsvm")),
-                                                  column(4)
-                                              )
+                                      box(width = 6,
+                                          column(12, title="Caractéristiques du modèle",
+                                                 verbatimTextOutput("SVM"),),
+                                          column(4)
+                                      ),
+                                      box(width = 6,
+                                          column(12,title="Matrice de Confusion",
+                                                 verbatimTextOutput("tablesvm"),),
+                                          column(4)
+                                      ),
+                                      box(width = 6,
+                                          column(12,title="Score de prédiction",
+                                                 verbatimTextOutput("scoresvm"),),
+                                          column(4)
+                                      ),
+                                      box(width = 6,
+                                          column(12, title ="Courbe ROC",
+                                                 plotOutput("svmRoc",width = "100%", height = "500px"),),
+                                          column(4)
+                                      ),
+                                      box(width = 6,
+                                          column(12, title ="AUC",
+                                                 verbatimTextOutput("aucsvm")),
+                                          column(4)
+                                      )
                                      )
                                      
                                    ),
