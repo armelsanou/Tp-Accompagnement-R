@@ -124,33 +124,33 @@ ui <- dashboardPage(skin="green",
                                       fluidRow(
                                         box(width = 12,dataTableOutput("table_credit_fraud_analyse"),
                                           title="Analyse exploratoire des données",
-                                          br(),
-                                          tags$p(strong("Analyse visuelle des variables du jeu de données")),
-                                          br(),
-                                          fluidRow(
-                                            box(width = 12, title="Cette étude nous donne aussi l'importance jouée par une varialbe, nous pouvons décider de la supprimer ou non, de modifier son type, etc...",
-                                              wellPanel(
-                                                fluidRow(width=12,
-                                                 # box(width = 12,
-                                                 #   column(12,
-                                                 #      mainPanel(verbatimTextOutput("df_freq"), style="")
-                                                 #    )
-                                                 # ),
-                                                 box(width = 6,
-                                                   column(12,
-                                                      mainPanel(verbatimTextOutput("df_status"), style="")
-                                                   )
-                                                 ),
-                                                 # box(width = 6,
-                                                 #   column(12,
-                                                 #      mainPanel(plotOutput("df_plot_num"), style="")
-                                                 #   )
-                                                 # )
-                                                )
-                                              ),
-                                              collapsible = T
-                                            )
-                                          ),
+                                          # br(),
+                                          # tags$p(strong("Analyse visuelle des variables du jeu de données")),
+                                          # br(),
+                                          # fluidRow(
+                                          #   box(width = 12, title="Cette étude nous donne aussi l'importance jouée par une varialbe, nous pouvons décider de la supprimer ou non, de modifier son type, etc...",
+                                          #     wellPanel(
+                                          #       fluidRow(width=12,
+                                          #        # box(width = 12,
+                                          #        #   column(12,
+                                          #        #      mainPanel(verbatimTextOutput("df_freq"), style="")
+                                          #        #    )
+                                          #        # ),
+                                          #        box(width = 6,
+                                          #          column(12,
+                                          #             mainPanel(verbatimTextOutput("df_status"), style="")
+                                          #          )
+                                          #        ),
+                                          #        # box(width = 6,
+                                          #        #   column(12,
+                                          #        #      mainPanel(plotOutput("df_plot_num"), style="")
+                                          #        #   )
+                                          #        # )
+                                          #       )
+                                          #     ),
+                                          #     collapsible = T
+                                          #   )
+                                          # ),
                                           br(),
                                           tags$h3(strong("Veuillez renseigner la colonne target au niveau de l'échantillonnage afin de mettre à jour les graphiques"), style="color: red;"),
                                           
@@ -293,12 +293,12 @@ ui <- dashboardPage(skin="green",
                                         collapsible = T)
                                       )
                                     ),
-                                    tabPanel(
-                                      "Prédiction de churn",
-                                      fluidRow(
-                                        box(width = 12,dataTableOutput("table_credit_fraud_churn"), title="Prédiction de churn", collapsible = T)
-                                      )
-                                    ),
+                                    # tabPanel(
+                                    #   "Prédiction de churn",
+                                    #   fluidRow(
+                                    #     box(width = 12,dataTableOutput("table_credit_fraud_churn"), title="Prédiction de churn", collapsible = T)
+                                    #   )
+                                    # ),
                                     tabPanel(
                                       "Sur-échantillonage et sous-échantillonage",
                                       fluidRow(
@@ -399,7 +399,7 @@ ui <- dashboardPage(skin="green",
               )
             ),
             tabPanel(
-              "Implémentation des differents modèles",
+              "Prédiction de churn",
               fluidRow(
                 tabsetPanel(
                   fluidRow(width = 12,
