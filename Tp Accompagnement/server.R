@@ -784,7 +784,6 @@ server<-function(input,output,session){
      if (!is.null(credit_fraud_data)) {
        col = input$quant_columns_select_credit_fraud
        target <- input$columns_select_target
-       print(credit_fraud_data[target])
        output$output_title_quant_credit <- renderText({
          paste("Graphe adapté pour la colonne ", input$quant_columns_select_credit_fraud)
        })
@@ -792,9 +791,9 @@ server<-function(input,output,session){
          output$plot_zone_quant_credit_card<-renderPlot({
            credit_fraud_data %>%
              ggplot() +
-             aes(x = col) +
+             aes(x = credit_fraud_data[col]) +
              geom_bar() +
-             facet_grid(target ~ .,
+             facet_grid(credit_fraud_data[target] ~ .,
                         scales = "free_y") +
              scale_x_continuous(breaks = seq(0, 50, 5))
          })
